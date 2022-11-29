@@ -30,6 +30,23 @@ void print_matrix(int size, int* grid) {
     }
 }
 
+
+__global__ void swap_top_bottom(int size, int* grid) {
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (0 < i && i < size-1) {
+        grid[size * (size-1) + i] = grid[size + i]; // top <- bottom
+        grid[i] = grid[size * (size-2) + i]; // bottom <- top
+    }
+}
+
+__global__ void swap_left_right(int size, int* grid) {
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (0 <= i && i < size) {
+        grid[i*size] = grid[i*size + size - 2]; // left <- right
+        grid[i*size + size - 1] = grid[i * size + 1]; // right <- left
+    }
+}
+
 __global__ void game_of_life(int size, int* grid, int* new_grid) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     int iy = blockDim.y * blockIdx.y + threadIdx.y;
@@ -51,7 +68,7 @@ __global__ void game_of_life(int size, int* grid, int* new_grid) {
 }
 
 int main(int argc, char* argv[]) {
-    int size = 1024;
+    int size = 512;
 
     sfRenderWindow* window = sfRenderWindow_create((sfVideoMode){800, 600, 32}, "game of life", sfResize | sfClose, NULL);
     if (!window) return EXIT_FAILURE;
@@ -70,10 +87,11 @@ int main(int argc, char* argv[]) {
     cudaMalloc(&cuda_grid, bytes);
     cudaMalloc(&cuda_new_grid, bytes);
 
-    srand(14);
+    srand(16);
     for (int i = 0; i < size; ++i) {
         for (int j = 0; j < size; ++j) {
-            if (0 < i && i < size-1 && 0 < j && j < size-1) host_grid[i * size + j] = rand() % 2;
+            if (0 <= i && i < size && 0 <= j && j < size) host_grid[i * size + j] = rand() % 2;
+
             sfVertex vertex;
             vertex.color = host_grid[i * size + j] ? sfWhite : sfBlack;
             vertex.position = (sfVector2f){(float) i, (float) j};
@@ -81,24 +99,23 @@ int main(int argc, char* argv[]) {
         }
     }
     dim3 threadsPerBlock(8, 8);
-    dim3 numBlocks(128,128);
+    dim3 numBlocks(64,64);
 
-    print_matrix(size, host_grid);
-    printf("\n");
+    dim3 swapThreadsPerBlock(64);
+    dim3 swapNumBlocks(8);
+    
     cudaMemcpy(cuda_grid, host_grid, bytes, cudaMemcpyHostToDevice);
 
 
     int i = 0; 
-    while (++i < 1000000) {
-        printf("%d\n",i);
+    while (i++ < 10000) {
+        swap_top_bottom<<<swapNumBlocks, swapThreadsPerBlock>>>(size, cuda_grid);
+        swap_left_right<<<swapNumBlocks, swapThreadsPerBlock>>>(size, cuda_grid);
         game_of_life<<<numBlocks,threadsPerBlock>>>(size, cuda_grid, cuda_new_grid);
         cuda_tmp_grid = cuda_grid;
         cuda_grid = cuda_new_grid;
         cuda_new_grid = cuda_tmp_grid;       
         cudaMemcpy(host_grid, cuda_grid, bytes, cudaMemcpyDeviceToHost);
-
-        //print_matrix(size, host_grid);
-
 
         for (int i = 0; i < size; ++i) {
             for (int j = 0; j < size; ++j) {

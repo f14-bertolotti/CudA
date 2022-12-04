@@ -19,115 +19,77 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <SFML/Graphics.h>
+#include <time.h>
+#include "./kernels.cu"
 
-
-void print_matrix(int size, int* grid) {
-    for (int i = 0; i < size; ++i) {
-        for (int j = 0; j < size; ++j) {
-            printf("%d",grid[i * size + j]);
-        }
-        printf("\n");
-    }
-}
-
-
-__global__ void swap_top_bottom(int size, int* grid) {
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-    if (0 < i && i < size-1) {
-        grid[size * (size-1) + i] = grid[size + i]; // top <- bottom
-        grid[i] = grid[size * (size-2) + i]; // bottom <- top
-    }
-}
-
-__global__ void swap_left_right(int size, int* grid) {
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-    if (0 <= i && i < size) {
-        grid[i*size] = grid[i*size + size - 2]; // left <- right
-        grid[i*size + size - 1] = grid[i * size + 1]; // right <- left
-    }
-}
-
-__global__ void game_of_life(int size, int* grid, int* new_grid) {
-    int ix = blockDim.x * blockIdx.x + threadIdx.x;
-    int iy = blockDim.y * blockIdx.y + threadIdx.y;
-    int id = iy * size + ix;
-    int numNeighbors;
-    
-
-    if (0 < ix && ix < size-1 && 0 < iy && iy < size-1) {
-        numNeighbors = grid[(iy-1) * size + ix+1] + grid[(iy+0) * size + ix+1] + grid[(iy+1) * size + ix+1] + 
-                       grid[(iy-1) * size + ix+0] + 0                          + grid[(iy+1) * size + ix+0] +
-                       grid[(iy-1) * size + ix-1] + grid[(iy+0) * size + ix-1] + grid[(iy+1) * size + ix-1]; 
-        new_grid[id] = 0        * (grid[id] == 1 && numNeighbors  < 2) + 
-                       1        * (grid[id] == 1 && (numNeighbors == 2 || numNeighbors == 3)) + 
-                       0        * (grid[id] == 1 && numNeighbors  > 3) +
-                       1        * (grid[id] == 0 && numNeighbors == 3) + 
-                       grid[id] * (grid[id] == 0 && numNeighbors != 3);
-    }
-
-}
 
 int main(int argc, char* argv[]) {
-    int size = 512;
 
-    sfRenderWindow* window = sfRenderWindow_create((sfVideoMode){800, 600, 32}, "game of life", sfResize | sfClose, NULL);
-    if (!window) return EXIT_FAILURE;
-
-    sfVertexArray* vertex_array = sfVertexArray_create();
-    sfVertexArray_setPrimitiveType(vertex_array, sfPoints);
-    
-    int bytes = sizeof(int) * size * size;
-
-    int* host_grid = NULL;
-    int* cuda_grid = NULL;
+    int size           = 1024;
+    int bytes          = sizeof(int) * size * size;
+    int* host_grid     = (int*) malloc(bytes);
+    int* cuda_grid     = NULL;
     int* cuda_tmp_grid = NULL;
     int* cuda_new_grid = NULL;
 
-    host_grid = (int*) malloc(bytes);
-    cudaMalloc(&cuda_grid, bytes);
+    cudaMalloc(&cuda_grid    , bytes);
     cudaMalloc(&cuda_new_grid, bytes);
 
-    srand(16);
-    for (int i = 0; i < size; ++i) {
-        for (int j = 0; j < size; ++j) {
-            if (0 <= i && i < size && 0 <= j && j < size) host_grid[i * size + j] = rand() % 2;
 
-            sfVertex vertex;
-            vertex.color = host_grid[i * size + j] ? sfWhite : sfBlack;
-            vertex.position = (sfVector2f){(float) i, (float) j};
-            sfVertexArray_append(vertex_array, vertex);
-        }
+    sfRenderWindow* window = sfRenderWindow_create((sfVideoMode){800, 600, 32}, "game of life", sfResize | sfClose, NULL);
+    if (!window) return EXIT_FAILURE;
+    sfVertexArray* vertex_array = sfVertexArray_create();
+    sfVertexArray_setPrimitiveType(vertex_array, sfPoints);
+    
+    srand(1);
+    for (int i = 0; i < size * size; ++i) {
+        host_grid[i] = rand() % 2;
+        sfVertex vertex;
+        vertex.color = host_grid[i] ? sfWhite : sfBlack;
+        vertex.position = (sfVector2f){(float) i/size, (float) (i % size)};
+        sfVertexArray_append(vertex_array, vertex);
     }
-    dim3 threadsPerBlock(8, 8);
-    dim3 numBlocks(64,64);
 
-    dim3 swapThreadsPerBlock(64);
-    dim3 swapNumBlocks(8);
+    dim3 threadsPerBlock     (16,16);
+    dim3 numBlocks           (64,64);
+    dim3 swapThreadsPerBlock (256);
+    dim3 swapNumBlocks       (4);
+
     
     cudaMemcpy(cuda_grid, host_grid, bytes, cudaMemcpyHostToDevice);
 
+    // main loop
+    float avg_clock = 0;
+    for(int n = 0;; ++n) {
+        // start timer
+        clock_t start = clock();
 
-    int i = 0; 
-    while (i++ < 10000) {
         swap_top_bottom<<<swapNumBlocks, swapThreadsPerBlock>>>(size, cuda_grid);
         swap_left_right<<<swapNumBlocks, swapThreadsPerBlock>>>(size, cuda_grid);
-        game_of_life<<<numBlocks,threadsPerBlock>>>(size, cuda_grid, cuda_new_grid);
-        cuda_tmp_grid = cuda_grid;
-        cuda_grid = cuda_new_grid;
-        cuda_new_grid = cuda_tmp_grid;       
-        cudaMemcpy(host_grid, cuda_grid, bytes, cudaMemcpyDeviceToHost);
+        game_of_life   <<<    numBlocks,     threadsPerBlock>>>(size, cuda_grid, cuda_new_grid);
 
-        for (int i = 0; i < size; ++i) {
-            for (int j = 0; j < size; ++j) {
-                sfVertex* vertex = sfVertexArray_getVertex(vertex_array, i * size + j);
-                vertex->color = host_grid[i * size + j] ? sfWhite : sfBlack;
-            }
+        cuda_tmp_grid = cuda_grid;
+        cuda_grid     = cuda_new_grid;
+        cuda_new_grid = cuda_tmp_grid;
+
+        for (int i = 0; i < size * size; ++i) {
+            sfVertex* vertex = sfVertexArray_getVertex(vertex_array, i);
+            vertex->color = host_grid[i] ? sfWhite : sfBlack;
         }
 
         sfRenderWindow_drawVertexArray(window, vertex_array, NULL);
         sfRenderWindow_display(window);
+
+        cudaMemcpy(host_grid, cuda_grid, bytes, cudaMemcpyDeviceToHost);
+
+        // take time
+        int msec = ((clock() - start) * 1000 / CLOCKS_PER_SEC)%1000;
+        if(n > 100) avg_clock = (msec + (n-100) * avg_clock) / (n+1-100);
+        printf("\rmsec: %d, avg:%f.", msec, avg_clock);
+        fflush(stdout);
     }
 
+    // free memory
     cudaFree(cuda_grid);
     cudaFree(cuda_new_grid);
     free(host_grid);

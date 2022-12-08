@@ -32,7 +32,7 @@ __global__ void game_of_life(int size, int* grid, int* new_grid) {
                        grid[(iy-1) * size + ix+0] + 0                          + grid[(iy+1) * size + ix+0] +
                        grid[(iy-1) * size + ix-1] + grid[(iy+0) * size + ix-1] + grid[(iy+1) * size + ix-1]; 
         int cell = grid[iy * size + ix];
-        new_grid[id] = max(0, min(1, cell + 0 + (numNeighbors==3) - ((numNeighbors < 2) || (numNeighbors > 3))));;
+        new_grid[id] = max(0, min(1, cell + 0 + (numNeighbors==3) - ((numNeighbors < 2) || (numNeighbors > 3))));
     }
 
 }

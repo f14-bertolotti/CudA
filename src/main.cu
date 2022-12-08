@@ -72,6 +72,7 @@ int main(int argc, char* argv[]) {
         cuda_grid     = cuda_new_grid;
         cuda_new_grid = cuda_tmp_grid;
 
+    
         for (int i = 0; i < size * size; ++i) {
             sfVertex* vertex = sfVertexArray_getVertex(vertex_array, i);
             vertex->color = host_grid[i] ? sfWhite : sfBlack;

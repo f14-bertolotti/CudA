@@ -22,3 +22,15 @@ run-gol: bin/gol/gol
 
 
 gol-bins: bin/gol/golfftRC bin/gol/golfft bin/gol/gol
+
+
+
+# basic fft
+bin/ltl/ltlfft: src/ltl/ltlfft.cu makefile
+	nvcc -O3 src/ltl/ltlfft.cu -o bin/ltl/ltlfft -g -G -lcsfml-graphics -lcufft
+
+run-ltlfft: bin/ltl/ltlfft
+	./bin/ltl/ltlfft
+
+
+

@@ -59,16 +59,6 @@ cufftComplex* getGOLGrid() {
     return dgrid;
  }
 
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
-{
-   if (code != cudaSuccess) 
-   {
-      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-      if (abort) exit(code);
-   }
-}
-
 __global__ void emmul(cufftComplex* A, cufftComplex* B) {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     float x = (A[i].x*B[i].x - A[i].y*B[i].y);

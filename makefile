@@ -32,5 +32,13 @@ bin/ltl/ltlfft: src/ltl/ltlfft.cu makefile
 run-ltlfft: bin/ltl/ltlfft
 	./bin/ltl/ltlfft
 
+# basic fft with improved display
+bin/ltl/ltlfft-tex: src/ltl/ltlfft-tex.cu makefile
+	nvcc -O3 src/ltl/ltlfft-tex.cu -o bin/ltl/ltlfft-tex -g -G -lsfml-graphics -lsfml-window -lsfml-system -lcufft
+
+run-ltlfft-tex: bin/ltl/ltlfft-tex
+	./bin/ltl/ltlfft-tex
+
+
 
 

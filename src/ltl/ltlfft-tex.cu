@@ -1,17 +1,14 @@
-#include <SFML/Graphics/PrimitiveType.h>
-#include <SFML/Graphics/RenderWindow.h>
-#include <SFML/Graphics/Types.h>
-#include <SFML/Graphics/VertexArray.h>
-#include <SFML/Window/VideoMode.h>
-#include <SFML/Window/Window.h>
 
+#include <SFML/Graphics.hpp>
+
+#include <cstdint>
 #include <time.h>
 #include <cufft.h>
 #include <stdio.h>
 
 #include "../utils/utils.cu"
 
-#define GSIZE 1024 
+#define GSIZE 4096 
 #define KSIZE 11 
 #define RBYTES GSIZE*GSIZE*sizeof(cufftReal)
 
@@ -63,23 +60,27 @@ __global__ void bosco_growth(cufftReal* grid, cufftReal* neigh, int b1, int b2, 
     grid[i] = max(0,min(1, c + ((n >= b1) & (n <= b2)) - ((n < s1) | (n > s2))));
 }
 
+__global__ void colorize(uint8_t* color_field, cufftReal* grid, int size) {
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    uint8_t v = (uint8_t) round(grid[i]);
+    color_field[4 * i + 0] = v * 255.0f;
+	color_field[4 * i + 1] = v * 255.0f;
+	color_field[4 * i + 2] = v * 255.0f;
+	color_field[4 * i + 3] = 255;
+}
+
+
+
 int main(int argc, char* argv[]) {
+    sf::RenderWindow window(sf::VideoMode(GSIZE, GSIZE), "larger than life fft");
+    sf::Texture texture;
+	sf::Sprite sprite;
+	std::vector<sf::Uint8> pixelBuffer(GSIZE * GSIZE * 4);
+	texture.create(GSIZE, GSIZE);
+
 
     int seed = time(0);
     printf("seed: %d;\n", seed);
-
-    sfRenderWindow* window = sfRenderWindow_create((sfVideoMode){1000, 1000, 32}, "game of life", sfResize | sfClose, NULL);
-    if (!window) return EXIT_FAILURE;
-    
-    // create vertex buffer
-    sfVertexArray* vertex_array = sfVertexArray_create();
-    sfVertexArray_setPrimitiveType(vertex_array, sfPoints);
-    for (int i = 0; i < GSIZE*GSIZE; ++i) {
-        sfVertex vertex;
-        vertex.color = sfBlack;
-        vertex.position = (sfVector2f){(float) i / GSIZE, (float) (i % GSIZE)};
-        sfVertexArray_append(vertex_array, vertex);
-    }
 
     cufftComplex* tmp = (cufftComplex*) malloc(sizeof(cufftComplex)*GSIZE*GSIZE);
 
@@ -92,12 +93,14 @@ int main(int argc, char* argv[]) {
     cufftReal*    device_ggrid     = NULL;
     cufftComplex* device_kgrid_fft = NULL;
     cufftComplex* device_ggrid_fft = NULL;
+    uint8_t*      color_field      = NULL;
 
     cudaMalloc(&device_neigh     ,sizeof(cufftReal)    * GSIZE * GSIZE);
     cudaMalloc(&device_kgrid     ,sizeof(cufftReal)    * GSIZE * GSIZE);
     cudaMalloc(&device_ggrid     ,sizeof(cufftReal)    * GSIZE * GSIZE);
     cudaMalloc(&device_kgrid_fft ,sizeof(cufftComplex) * GSIZE * GSIZE);
     cudaMalloc(&device_ggrid_fft ,sizeof(cufftComplex) * GSIZE * GSIZE);
+    cudaMalloc(&color_field      ,sizeof(uint8_t)      * GSIZE * GSIZE * 4);
 
     cudaMemcpy(device_kgrid, kgrid, sizeof(cufftReal) * GSIZE * GSIZE, cudaMemcpyHostToDevice);
     cudaMemcpy(device_ggrid, ggrid, sizeof(cufftReal) * GSIZE * GSIZE, cudaMemcpyHostToDevice);
@@ -106,22 +109,21 @@ int main(int argc, char* argv[]) {
     
     float avg_clock = 0;
     for (int n = 0;; ++n) {
+        window.clear(sf::Color::Black);
         clock_t start = clock();
 
         device_rfft2(device_ggrid, device_ggrid_fft, GSIZE);
         scaled_hadamart_product<<<dim3((GSIZE/2+1)*GSIZE/256),dim3(256)>>>(device_ggrid_fft, device_kgrid_fft, GSIZE);
         device_irfft2(device_ggrid_fft, device_neigh, GSIZE); 
         bosco_growth<<<dim3(GSIZE*GSIZE/256),dim3(256)>>>(device_ggrid, device_neigh, BOSCO_B1, BOSCO_B2, BOSCO_S1, BOSCO_S2, GSIZE);
+        colorize<<<dim3(GSIZE*GSIZE/256),dim3(256)>>>(color_field, device_ggrid, GSIZE);
 
-        for (int i = 0; i < GSIZE*GSIZE; ++i) {
-            sfVertex* vertex = sfVertexArray_getVertex(vertex_array, i);
-            vertex->color = round(ggrid[i]) ? sfWhite : sfBlack;
-        }
-
-        sfRenderWindow_drawVertexArray(window, vertex_array, NULL);
-        sfRenderWindow_display(window);
-
-        cudaMemcpy(ggrid, device_ggrid, sizeof(cufftReal)*GSIZE*GSIZE, cudaMemcpyDeviceToHost);
+        cudaMemcpy(pixelBuffer.data(), color_field, sizeof(uint8_t)*GSIZE*GSIZE*4, cudaMemcpyDeviceToHost);
+		texture.update(pixelBuffer.data());
+		sprite.setTexture(texture);
+		sprite.setScale({2, 2});
+		window.draw(sprite);
+		window.display();
 
         // take time
         int msec = ((clock() - start) * 1000 / CLOCKS_PER_SEC)%1000;

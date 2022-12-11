@@ -23,9 +23,7 @@ run-gol: bin/gol/gol
 
 gol-bins: bin/gol/golfftRC bin/gol/golfft bin/gol/gol
 
-
-
-# basic fft
+# larger than life fft
 bin/ltl/ltlfft: src/ltl/ltlfft.cu makefile
 	nvcc -O3 src/ltl/ltlfft.cu -o bin/ltl/ltlfft -g -G -lcsfml-graphics -lcufft
 
@@ -39,6 +37,12 @@ bin/ltl/ltlfft-tex: src/ltl/ltlfft-tex.cu makefile
 run-ltlfft-tex: bin/ltl/ltlfft-tex
 	./bin/ltl/ltlfft-tex
 
+# primordia fft
+bin/primordia/primordia-fft: src/primordia/primordia-fft.cu makefile
+	nvcc -O3 src/primordia/primordia-fft.cu -o bin/primordia/primordia-fft -g -G  -lsfml-graphics -lsfml-window -lsfml-system -lcufft
+
+run-primordia-fft: bin/primordia/primordia-fft
+	./bin/primordia/primordia-fft
 
 
 

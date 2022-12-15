@@ -44,12 +44,26 @@ bin/primordia/primordia-fft: src/primordia/primordia-fft.cu makefile
 run-primordia-fft: bin/primordia/primordia-fft
 	./bin/primordia/primordia-fft
 
-
-# space/time continuos primordia fft
+# states/time continuos primordia fft
 bin/primordia/continuos-primordia-fft: src/primordia/continuos-primordia-fft.cu makefile
 	nvcc -O3 src/primordia/continuos-primordia-fft.cu -o bin/primordia/continuos-primordia-fft -g -G  -lsfml-graphics -lsfml-window -lsfml-system -lcufft
 
 run-continuos-primordia-fft: bin/primordia/continuos-primordia-fft
 	./bin/primordia/continuos-primordia-fft
+
+# states/time continuos primordia fft with variable kernel
+bin/primordia/continuos-primordia-R-fft: src/primordia/continuos-primordia-R-fft.cu makefile
+	nvcc -O3 src/primordia/continuos-primordia-R-fft.cu -o bin/primordia/continuos-primordia-R-fft -g -G  -lsfml-graphics -lsfml-window -lsfml-system -lcufft
+
+run-continuos-primordia-R-fft: bin/primordia/continuos-primordia-R-fft
+	./bin/primordia/continuos-primordia-R-fft
+
+
+# states/time continuos primordia fft with round kernel
+bin/primordia/continuos-primordia-R-round-fft: src/primordia/continuos-primordia-R-round-fft.cu makefile
+	nvcc -O3 src/primordia/continuos-primordia-R-round-fft.cu -o bin/primordia/continuos-primordia-R-round-fft -g -G  -lsfml-graphics -lsfml-window -lsfml-system -lcufft
+
+run-continuos-primordia-R-round-fft: bin/primordia/continuos-primordia-R-round-fft
+	./bin/primordia/continuos-primordia-R-round-fft
 
 

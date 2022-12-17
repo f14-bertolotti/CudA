@@ -61,7 +61,7 @@ run-continuos-primordia-R-fft: bin/primordia/continuos-primordia-R-fft
 
 # states/time continuos primordia fft with round kernel
 bin/primordia/continuos-primordia-R-round-fft: src/primordia/continuos-primordia-R-round-fft.cu makefile
-	nvcc -O3 src/primordia/continuos-primordia-R-round-fft.cu -o bin/primordia/continuos-primordia-R-round-fft -g -G  -lsfml-graphics -lsfml-window -lsfml-system -lcufft
+	nvcc -O3 -x cu src/primordia/continuos-primordia-R-round-fft.cu -o bin/primordia/continuos-primordia-R-round-fft -g -G  -lsfml-graphics -lsfml-window -lsfml-system -lcufft
 
 run-continuos-primordia-R-round-fft: bin/primordia/continuos-primordia-R-round-fft
 	./bin/primordia/continuos-primordia-R-round-fft

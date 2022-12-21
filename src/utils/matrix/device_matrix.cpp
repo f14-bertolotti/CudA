@@ -1,25 +1,28 @@
 #pragma once
-#include "matrix.cpp"
+
+#include "../buffer/device_buffer.cpp"
+
+template <class T>
+class HostMatrix;
 
 template <class T>
 class DeviceMatrix {
+    
     public:
+        DeviceBuffer<T>* buffer;
         T* ptr;
         int size;
 
-        DeviceMatrix(Matrix<T>* matrix) {
-            size = matrix->size;
-            cudaMalloc(&ptr, matrix->size * matrix->size * sizeof(T));
-            cudaMemcpy(ptr, matrix->ptr, matrix->size * matrix->size * sizeof(T), cudaMemcpyHostToDevice);
-        }
-
         DeviceMatrix(int size) {
-            cudaMalloc(&ptr, size * size * sizeof(T));
-            cudaMemset(ptr, 0, size * size * sizeof(T));
+            buffer     = new DeviceBuffer<T>(size * size);
+            this->ptr  = buffer->ptr;
+            this->size = size;
         }
 
-        void print() {
-            print("%.2f ");
+        DeviceMatrix(HostMatrix<T>* matrix) {
+            this->size = matrix->size;
+            this->buffer = new DeviceBuffer<T>(matrix->buffer);
+            this->ptr = this->buffer->ptr;
         }
 
         void print(const char* format) {
@@ -32,5 +35,8 @@ class DeviceMatrix {
             free(tmp);
         }
 
-        ~DeviceMatrix() { cudaFree(ptr); }
+        ~DeviceMatrix() { 
+            delete this->buffer;
+        }
+        
 };

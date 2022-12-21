@@ -1,14 +1,14 @@
 #pragma once
 
-#include "matrix.cpp"
+#include "matrix/host_matrix.cpp"
 
 enum KernelType {game_of_life};
 
 
-class Kernel: public Matrix<float>{
+class Kernel: public HostMatrix<float>{
 
     public: 
-        Kernel(KernelType type, int kernel_size):Matrix(kernel_size) {
+        Kernel(KernelType type, int kernel_size):HostMatrix(kernel_size) {
             switch (type) {
                 case game_of_life: init_game_of_life_kernel();
             }                

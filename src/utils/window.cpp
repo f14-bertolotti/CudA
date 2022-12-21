@@ -1,27 +1,53 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include "buffer/device_buffer.cpp"
+#include "buffer/host_buffer.cpp"
+
+
+__global__ void copy_from(sf::Uint8* color_buffer, float* data_buffer, unsigned int size) {
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < size) {
+        color_buffer[4 * i + 0] = (round(data_buffer[i])+1) * 255/2;
+	    color_buffer[4 * i + 1] = (round(data_buffer[i])+1) * 255/2;
+	    color_buffer[4 * i + 2] = (round(data_buffer[i])+1) * 255/2;
+	    color_buffer[4 * i + 3] = 255;
+    }
+}
+
 
 class Window {
 
     public:
-        sf::Texture     texture;
-        sf::Sprite       sprite;
+        int size;
+        sf::RenderWindow* window;
+        sf::Texture      texture;
+        sf::Sprite        sprite;
 
-        sf::RenderWindow*       window;
-        std::vector<sf::Uint8>* buffer;
+        HostBuffer  <sf::Uint8>*   host_buffer;
+        DeviceBuffer<sf::Uint8>* device_buffer;
 
         Window(int size) {
+            this->size   = size;
             this->window = new sf::RenderWindow(sf::VideoMode(size, size), "cellular automaton in cuda");
-	        this->buffer = new std::vector<sf::Uint8>(size * size * 4);
-	        this->texture.create(size, size);
+
+	        this->  host_buffer = new   HostBuffer<sf::Uint8>(size * size * 4);
+            this->device_buffer = new DeviceBuffer<sf::Uint8>(size * size * 4);
+
+	        texture.create(size, size);
         }
 
-        sf::Uint8* get_buffer() {
-            return buffer->data();
-        }
+        void update(DeviceBuffer<float>* buffer) {
+            
+            int gsize, bsize;
+            cudaOccupancyMaxPotentialBlockSize(&gsize, &bsize, copy_from, 0, 0);
+            gsize = ((size*size) + bsize - 1) / bsize; 
+    
+            copy_from<<<dim3(gsize), dim3(bsize)>>>(device_buffer->ptr, buffer->ptr, size * size);
 
-        void update() {
+            cudaMemcpy(this->host_buffer->ptr, this->device_buffer->ptr, sizeof(sf::Uint8) * size * size * 4, cudaMemcpyDeviceToHost);
+
+            this->texture.update(this->host_buffer->ptr);
 		    this->sprite.setTexture(this->texture);
 		    this->sprite.setScale({2, 2});
 		    this->window->draw(this->sprite);
@@ -29,23 +55,11 @@ class Window {
         }
 
         ~Window() {
-            delete this->buffer;
             delete this->window;
+            delete this->  host_buffer;
+            delete this->device_buffer;
         }
 
 
 };
-
-//    sf::RenderWindow window(sf::VideoMode(GSIZE, GSIZE), "larger than life fft");
-//    sf::Texture texture;
-//	sf::Sprite sprite;
-//	std::vector<sf::Uint8> pixelBuffer(GSIZE * GSIZE * 4);
-//	texture.create(GSIZE, GSIZE);
-
-//        texture.update(pixelBuffer.data());
-//		sprite.setTexture(texture);
-//		sprite.setScale({2, 2});
-//		window.draw(sprite);
-//		window.display();
-
 

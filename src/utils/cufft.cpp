@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cufft.h>
-#include "device_matrix.cpp"
+#include "matrix/device_matrix.cpp"
 
 class FFT {
 

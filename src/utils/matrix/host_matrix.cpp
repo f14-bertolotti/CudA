@@ -2,6 +2,7 @@
 
 #include "../buffer/host_buffer.cpp"
 #include "device_matrix.cpp"
+#include <cufft.h>
 
 template <class T>
 class HostMatrix {
@@ -31,8 +32,18 @@ class HostMatrix {
           }
       }
 
+      HostMatrix<T>* scale(float value) {
+         for (int i = 0; i < size * size; ++i) buffer->ptr[i] *= value;
+         return this;
+      }
+
       ~HostMatrix() {
          delete this->buffer;
       }
 
 };
+
+template<> HostMatrix<cufftComplex>* HostMatrix<cufftComplex>::scale(float value) {
+   for (int i = 0; i < size * size; ++i) buffer->ptr[i].x *= value;
+   return this;
+}

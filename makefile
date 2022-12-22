@@ -1,4 +1,10 @@
 
+run-gol: 
+	make -C gol/ run
+ 
+clean-gol:
+	make -C gol/ clean
+
 # basic fft but with real-to-comple and complex-to-real
 #bin/gol/golfftRC: src/gol/kernels.cu src/gol/golfftRC.cu makefile
 #	nvcc -O3 src/gol/golfftRC.cu -o bin/gol/golfftRC -g -G -lcsfml-graphics -lcufft
@@ -66,13 +72,6 @@
 ##########################################################################################
 ##################################### THE C++ ERA ########################################
 ##########################################################################################
-
-# GAME OF LIFE
-bin/gol/golcpp: src/utils/* src/gol/gol.cpp makefile
-	nvcc -x cu -O3 src/gol/gol.cpp -o bin/gol/golcpp -g -G -lsfml-graphics -lsfml-window -lsfml-system -lcufft
-
-run-golcpp: bin/gol/golcpp
-	./bin/gol/golcpp
 
 
 

@@ -27,3 +27,12 @@ __global__ void larger_than_life_growth(cufftReal* grid, cufftReal* neigh, int b
         grid[i] = max(0,min(1, c + ((n >= b1) & (n <= b2)) - ((n < s1) | (n > s2))));
     }
 }
+
+__global__ void primordia_growth(cufftReal* grid, cufftReal* neigh, int size) {
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < size) {
+        float c = grid[i];
+        float n = neigh[i];
+        grid[i] = max(0.0f,min(1.0f, c + (1/10.0f) * (((n >= 0.20)&(n <= 0.25)) - ((n <= 0.19)|(n >= 0.33)))));
+    }
+}

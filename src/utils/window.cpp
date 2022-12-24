@@ -8,13 +8,12 @@
 __global__ void copy_from(sf::Uint8* color_buffer, float* data_buffer, unsigned int size) {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i < size) {
-        color_buffer[4 * i + 0] = (round(data_buffer[i])+1) * 255/2;
-	    color_buffer[4 * i + 1] = (round(data_buffer[i])+1) * 255/2;
-	    color_buffer[4 * i + 2] = (round(data_buffer[i])+1) * 255/2;
+        color_buffer[4 * i + 0] = data_buffer[i] * 255;
+	    color_buffer[4 * i + 1] = data_buffer[i] * 255;
+	    color_buffer[4 * i + 2] = data_buffer[i] * 255;
 	    color_buffer[4 * i + 3] = 255;
     }
 }
-
 
 class Window {
 

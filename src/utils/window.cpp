@@ -8,9 +8,9 @@
 __global__ void copy_from(sf::Uint8* color_buffer, float* data_buffer, unsigned int size) {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i < size) {
-        color_buffer[4 * i + 0] = data_buffer[i] * 255;
-	    color_buffer[4 * i + 1] = data_buffer[i] * 255;
-	    color_buffer[4 * i + 2] = data_buffer[i] * 255;
+        color_buffer[4 * i + 0] = min(data_buffer[i] * 255+30, 255.0f);
+	    color_buffer[4 * i + 1] = min(data_buffer[i] * 255+30, 255.0f);
+	    color_buffer[4 * i + 2] = min(data_buffer[i] * 255+30, 255.0f);
 	    color_buffer[4 * i + 3] = 255;
     }
 }
@@ -46,6 +46,7 @@ class Window {
 
             cudaMemcpy(this->host_buffer->ptr, this->device_buffer->ptr, sizeof(sf::Uint8) * size * size * 4, cudaMemcpyDeviceToHost);
 
+            this->window->clear(sf::Color::Black);
             this->texture.update(this->host_buffer->ptr);
 		    this->sprite.setTexture(this->texture);
 		    this->sprite.setScale({2, 2});

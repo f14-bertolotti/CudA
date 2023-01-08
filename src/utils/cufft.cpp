@@ -22,6 +22,14 @@ class FFT {
         cufftExecC2R(planC2R, input->ptr, output->ptr);
     }
 
+    void rfft2(cufftReal* input, cufftComplex* output) {
+        cufftExecR2C(planR2C, input, output);
+    }
+
+    void irfft2(cufftComplex* input, cufftReal* output) {
+        cufftExecC2R(planC2R, input, output);
+    }
+
     ~FFT() {
         cufftDestroy(planC2R);
         cufftDestroy(planR2C);

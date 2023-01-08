@@ -2,6 +2,7 @@
 
 #include "../buffer/device_buffer.cpp"
 #include <cufft.h>
+#include <stdio.h>
 
 template <class T>
 class HostMatrix;

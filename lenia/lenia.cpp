@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
     int size = 512;
 
     FFT       fft(size);
-    Grid     grid(random_0_to_1, size);
+    Grid     grid(trained_signal, size);
     Kernel kernel(bell, 13, 0.5, 0.15, size);
     Window window(size);
     Timer   timer;
@@ -36,9 +36,9 @@ int main(int argc, char *argv[]) {
 
         timer.start();
 
-        fft.rfft2(&device_real_grid, &device_cplx_grid);
+        fft.rfft2(device_real_grid.ptr, device_cplx_grid.ptr);
         scaled_hadamart_product<<<dim3(gsize1), dim3(bsize1)>>>(device_cplx_grid.ptr, device_cplx_kernel.ptr, size * size, size * size);
-        fft.irfft2(&device_cplx_grid, &device_real_neigh);
+        fft.irfft2(device_cplx_grid.ptr, device_real_neigh.ptr);
         lenia_growth<<<dim3(gsize2), dim3(bsize2)>>>(device_real_grid.ptr, device_real_neigh.ptr, 0.1f, 0.135f, 0.015f, size * size);
         window.update(device_real_grid.buffer);
 

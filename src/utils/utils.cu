@@ -46,3 +46,10 @@ __global__ void lenia_growth(cufftReal* grid, cufftReal* neigh, float dtime, flo
     }
 
 }
+
+__global__ void fill(float* grid, float value, int size) {
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < size) {
+        grid[i] = value;
+    }
+}

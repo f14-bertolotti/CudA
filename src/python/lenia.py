@@ -121,129 +121,46 @@ class Model2(torch.nn.Module):
         self.lenia = Lenia(size=64, device=device)
         self.iterations = iterations
 
-        self.mu_lin0 = torch.nn.Linear(1,2500, device=device)
-        self.mu_lin1 = torch.nn.Linear(2500,2500, device=device)
-        self.mu_lin2 = torch.nn.Linear(2500,2500, device=device)
-        self.mu_lin3 = torch.nn.Linear(2500,2500, device=device)
-        self.mu_ln0 = torch.nn.LayerNorm(2500, device=device)
-        self.mu_ln1 = torch.nn.LayerNorm(2500, device=device)
-        self.mu_ln2 = torch.nn.LayerNorm(2500, device=device)
-        self.sigma_lin0 = torch.nn.Linear(1,2500, device=device)
-        self.sigma_lin1 = torch.nn.Linear(2500,2500, device=device)
-        self.sigma_lin2 = torch.nn.Linear(2500,2500, device=device)
-        self.sigma_lin3 = torch.nn.Linear(2500,2500, device=device)
-        self.sigma_ln0 = torch.nn.LayerNorm(2500, device=device)
-        self.sigma_ln1 = torch.nn.LayerNorm(2500, device=device)
-        self.sigma_ln2 = torch.nn.LayerNorm(2500, device=device)
-
-        self.orb1 = torch.tensor(orbium, device=device, requires_grad=True)
-        self.orb2 = torch.tensor(orbium, device=device, requires_grad=True).flip(0)
-
-        self.mean = torch.zeros(batch_size, 50,50, requires_grad=False, device=device)
-        self.std  = torch. ones(batch_size, 50,50, requires_grad=False, device=device)
-
-    def forward(self):
-
-        mu = self.mu_lin0(torch.tensor([1], dtype=torch.float, device = self.device))
-        mu = self.mu_ln0(mu + torch.nn.functional.relu(self.mu_lin1(mu)))
-        mu = self.mu_ln1(mu + torch.nn.functional.relu(self.mu_lin2(mu)))
-        mu = self.mu_ln2(mu + torch.nn.functional.relu(self.mu_lin3(mu)))
-        mu = mu.reshape(50,50)
-        sigma = self.sigma_lin0(torch.tensor([1], dtype=torch.float, device = self.device))
-        sigma = self.sigma_ln0(sigma + torch.nn.functional.relu(self.sigma_lin1(sigma)))
-        sigma = self.sigma_ln1(sigma + torch.nn.functional.relu(self.sigma_lin2(sigma)))
-        sigma = self.sigma_ln2(sigma + torch.nn.functional.relu(self.sigma_lin3(sigma)))
-        sigma = sigma.reshape(50,50)
-
-        x = torch.normal(mean=self.mean, std=self.std) * sigma + mu
-        x = torch.clamp(x, 0, 1)
-        x = torch.nn.functional.pad(x, (5,9,5,9,0,0))
-        signal = mid_signal = running_signal = x
-
-        loss = torch.zeros(signal.size(0)).to(signal.device);
-        for i in range(1,self.iterations): 
-            if i == self.iterations // 2: mid_signal = running_signal
-            running_signal = self.lenia.run(running_signal)  
-            loss += running_signal[:,:,:5].mean(2).mean(1)
-            loss += running_signal[:,:,55:].mean(2).mean(1)
-            loss -= running_signal[:,5:55,5:55].mean(2).mean(1)
-            loss += running_signal[:,:5,5:55].mean(2).mean(1)
-            loss += running_signal[:,55:,5:55].mean(2).mean(1)
-
-        return loss, signal, mid_signal, running_signal
-
-class Model3(torch.nn.Module):
-    def __init__(self, batch_size = 10, iterations = 41, device="cpu"):
-        super().__init__()
-        self.device = device
-        self.lenia = Lenia(size=64, device=device)
-        self.iterations = iterations
-
-        self.mu_lin0 = torch.nn.Linear(1,400, device=device)
-        self.mu_lin1 = torch.nn.Linear(400,400, device=device)
-        self.mu_lin2 = torch.nn.Linear(400,400, device=device)
-        self.mu_lin3 = torch.nn.Linear(400,400, device=device)
-        self.mu_lin4 = torch.nn.Linear(400,400, device=device)
-        self.mu_ln0 = torch.nn.LayerNorm(400, device=device)
-        self.mu_ln1 = torch.nn.LayerNorm(400, device=device)
-        self.mu_ln2 = torch.nn.LayerNorm(400, device=device)
-        self.mu_ln3 = torch.nn.LayerNorm(400, device=device)
-        self.sigma_lin0 = torch.nn.Linear(1,400, device=device)
-        self.sigma_lin1 = torch.nn.Linear(400,400, device=device)
-        self.sigma_lin2 = torch.nn.Linear(400,400, device=device)
-        self.sigma_lin3 = torch.nn.Linear(400,400, device=device)
-        self.sigma_lin4 = torch.nn.Linear(400,400, device=device)
-        self.sigma_ln0 = torch.nn.LayerNorm(400, device=device)
-        self.sigma_ln1 = torch.nn.LayerNorm(400, device=device)
-        self.sigma_ln2 = torch.nn.LayerNorm(400, device=device)
-        self.sigma_ln3 = torch.nn.LayerNorm(400, device=device)
-
-        self.orb1 = torch.tensor(orbium, device=device, requires_grad=True)
-        self.orb2 = torch.tensor(orbium, device=device, requires_grad=True).flip(0)
+        self.mu = torch.rand(400, requires_grad=True, device=device)
+        self.sigma = torch.rand(400, requires_grad=True, device=device)
+        self.mulin = torch.nn.ModuleList([torch.nn.Linear(400,400,device=device) for _ in range(8)])
+        self.sigmalin = torch.nn.ModuleList([torch.nn.Linear(400,400,device=device) for _ in range(8)])
+        self.muln = torch.nn.ModuleList([torch.nn.LayerNorm(400,device=device) for _ in range(8)])
+        self.sigmaln = torch.nn.ModuleList([torch.nn.LayerNorm(400,device=device) for _ in range(8)])
 
         self.mean = torch.zeros(batch_size, 20,20, requires_grad=False, device=device)
         self.std  = torch. ones(batch_size, 20,20, requires_grad=False, device=device)
 
     def forward(self):
 
-        mu = self.mu_lin0(torch.tensor([1], dtype=torch.float, device = self.device))
-        mu = self.mu_ln0(mu + torch.nn.functional.relu(self.mu_lin1(mu)))
-        mu = self.mu_ln1(mu + torch.nn.functional.relu(self.mu_lin2(mu)))
-        mu = self.mu_ln2(mu + torch.nn.functional.relu(self.mu_lin3(mu)))
-        mu = self.mu_ln3(mu + torch.nn.functional.relu(self.mu_lin4(mu)))
+        mu = self.mu
+        for lin, ln in zip(self.mulin, self.muln):
+            mu = ln(mu + torch.nn.functional.relu(lin(mu)))
         mu = mu.reshape(20,20)
-        sigma = self.sigma_lin0(torch.tensor([1], dtype=torch.float, device = self.device))
-        sigma = self.sigma_ln0(sigma + torch.nn.functional.relu(self.sigma_lin1(sigma)))
-        sigma = self.sigma_ln1(sigma + torch.nn.functional.relu(self.sigma_lin2(sigma)))
-        sigma = self.sigma_ln2(sigma + torch.nn.functional.relu(self.sigma_lin3(sigma)))
-        sigma = self.sigma_ln3(sigma + torch.nn.functional.relu(self.sigma_lin4(sigma)))
+
+        sigma = self.sigma
+        for lin, ln in zip(self.sigmalin, self.sigmaln):
+            sigma = ln(sigma + torch.nn.functional.relu(lin(sigma)))
         sigma = sigma.reshape(20,20)
 
         x = torch.normal(mean=self.mean, std=self.std) * sigma + mu
+        x = torch.clamp(x,0,1)
+        x = torch.nn.functional.pad(x, (0,44,0,44,0,0))
+        signal = mid_signal = running_signal = x
 
-        loss = torch.zeros(x.size(0), device=x.device)
-
-        signal = torch.clamp(x, 0, 1)
-        signal = torch.nn.functional.pad(signal, (0,44,0,44,0,0))
-        running_signal = mid_signal = signal
-        
-        loss += ((x-1)**2).mean(1).mean(1)
+        loss = torch.zeros(signal.size(0)).to(signal.device);
         for i in range(1,self.iterations): 
             if i == self.iterations // 2: mid_signal = running_signal
-            with torch.no_grad():
-                running_signal = self.lenia.run(running_signal)  
-
-            loss += ((running_signal[:,30:50,30:50] - 1)**2).mean(1).mean(1)
-        #loss += ((running_signal[:,:20,:20] - 1)**2).mean(1).mean(1)
-        #loss += running_signal[:,20:,:].mean(1).mean(1)
-        #loss += running_signal[:,20:,20:].mean(1).mean(1)
-
+            loss += running_signal[:,:,20:].mean(2).mean(1)
+            loss += running_signal[:,20:,:20].mean(2).mean(1)
+            loss += (running_signal[:,:20,:20].mean(2).mean(1)-.25)**2
+            running_signal = self.lenia.run(running_signal)  
 
         return loss, signal, mid_signal, running_signal
 
 
 
-model = Model3(batch_size=16, iterations=51, device="cuda:0")
+model = Model2(batch_size=32, iterations=31, device="cuda:0")
 optimizer = torch.optim.Adam(list(model.parameters()), lr=0.001)
 
 import beepy

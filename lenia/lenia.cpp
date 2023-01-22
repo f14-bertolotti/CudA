@@ -1,18 +1,18 @@
 #include <cufft.h>
 
-#include "../src/utils/window.cpp"
-#include "../src/utils/kernels.cpp"
-#include "../src/utils/grids.cpp"
-#include "../src/utils/cufft.cpp"
-#include "../src/utils/timer.cpp"
-#include "../src/utils/utils.cu"
+#include "../utils/window.cpp"
+#include "../utils/kernels.cpp"
+#include "../utils/grids.cpp"
+#include "../utils/cufft.cpp"
+#include "../utils/timer.cpp"
+#include "../utils/utils.cu"
 
 int main(int argc, char *argv[]) {
 
     int size = 512;
 
     FFT       fft(size);
-    Grid     grid(trained_signal, size);
+    Grid     grid(random_0_to_1, size);
     Kernel kernel(bell, 13, 0.5, 0.15, size);
     Window window(size);
     Timer   timer;
